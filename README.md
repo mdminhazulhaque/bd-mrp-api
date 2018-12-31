@@ -2,6 +2,10 @@
 
 This (dump) API allows you to check the status of your passport using correct Enrollment ID, Date of Birth and Captcha Text.
 
+It can also be done from the following address but I tried to make this scriptable.
+
+http://passport.gov.bd/OnlineStatus.aspx
+
 The captcha image will be shown using ImageMagick and you have to provide the captcha text manually. :-(
 
 ## Requirment
