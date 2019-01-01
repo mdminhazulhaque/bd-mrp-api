@@ -26,6 +26,8 @@ except ImportError:
 
 import requests
 import re
+import ansi
+from PIL import Image
 
 class MRP():
     __headers = {
@@ -68,39 +70,55 @@ class MRP():
         self.__data['ctl00$ContentPlaceHolder1$txtSearchDOB'] = dob
         self.__data['ctl00$ContentPlaceHolder1$txtSearchVerify'] = captchatext        
 
-        response = requests.post('http://www.passport.gov.bd/OnlineStatus.aspx', headers=self.__headers, data=self.__data)
+        response = requests.post('http://www.passport.gov.bd/OnlineStatus.aspx', headers=self.__headers, data=self.__data).text
         
-        regex = re.compile(r'<table\sclass=\"GridList\"(.*?)</table>', re.M|re.I|re.S)
-        try:
-            table = regex.search(response.text).group(0)
-            
-            soup = BeautifulSoup(table, "lxml")
-            values =  soup.find_all("tr")[2].find_all("td")
-            
-            info = {
-                "Enrolment ID": values[0].text,
-                "Status": values[1].text,
-                "Full Name": values[2].text,
-                "First Name": values[3].text,
-                "Last Name": values[4].text,
-                "Date of Birth": values[5].text,
-                "Father's Name": values[6].text,
-                "Mother's Name": values[7].text,
-                "Permanent Address": {
-                    "Police Station": values[8].text,
-                    "District": values[9].text
-                },
-                "Present Address": {
-                    "Police Station": values[10].text,
-                    "District": values[11].text
-                }
+        e = "<li>The text you typed does not match the text in the image.</li>"
+        if e in response: raise Exception(e.replace("<li>", "").replace("</li>", ""))
+        
+        regex = re.compile(r'<table\sclass=\"GridList\"(.*?)</table>', re.M|re.S) # M = multiline, S = dot as all
+        table = regex.search(response).group(0)
+        
+        soup = BeautifulSoup(table, "lxml")
+        values =  soup.find_all("tr")[2].find_all("td")
+        
+        info = {
+            "Enrolment ID": values[0].text,
+            "Status": values[1].text,
+            "Full Name": values[2].text,
+            "First Name": values[3].text,
+            "Last Name": values[4].text,
+            "Date of Birth": values[5].text,
+            "Father's Name": values[6].text,
+            "Mother's Name": values[7].text,
+            "Permanent Address": {
+                "Police Station": values[8].text,
+                "District": values[9].text
+            },
+            "Present Address": {
+                "Police Station": values[10].text,
+                "District": values[11].text
             }
-            return info
-        except:
-            return {}
+        }
+        return info
+
+def show_image_ansi(url):
+    img = Image.open(requests.get(url, stream=True).raw)
+    
+    img = img.convert('RGBA')
+    native_width, native_height = img.size
+    maxLen = min(100, native_width)
+    rate = float(maxLen) / max(native_width, native_height)
+    new_width = int(rate * native_width)  
+    new_height = int(rate * native_height)
+    img = img.resize((new_width, new_height), Image.ANTIALIAS)
+    
+    sys.stdout.write("\x1b[49m\x1b[K")
+    sys.stdout.write(ansi.generate_ANSI_from_pixels(img.load(), new_width, new_height, None)[0])
+    sys.stdout.write("\x1b[0m\n")
 
 if __name__ == "__main__":
     import argparse
+    import sys
     
     parser = argparse.ArgumentParser(description="Bangladesh MRP Status Checker", add_help=False)
     parser.add_argument('-e', dest='enrolmentid', action="store", required=True, type=str)
@@ -110,14 +128,15 @@ if __name__ == "__main__":
     mrp = MRP()
     url = mrp.getCaptchaImageURL()
     
-    from PIL import Image
-    img = Image.open(requests.get(url, stream=True).raw)
-    img.show()
-    
-    # TODO Will be removed using captcha solving api
+    show_image_ansi(url)
     captcha = input("Enter the captcha text: ").strip()
-    status = mrp.getStatus(args.enrolmentid, args.dob, captcha)
     
-    import json
-    print(json.dumps(status, indent=2))
+    try:
+        import json
+        status = mrp.getStatus(args.enrolmentid, args.dob, captcha)
+        print(json.dumps(status, indent=2))
+    except Exception as r:
+        print(r)
+    except:
+        print("An unknown error occured")
     
