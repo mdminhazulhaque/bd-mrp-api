@@ -119,6 +119,7 @@ def show_image_ansi(url):
 if __name__ == "__main__":
     import argparse
     import sys
+    import os
     
     parser = argparse.ArgumentParser(description="Bangladesh MRP Status Checker", add_help=False)
     parser.add_argument('-e', dest='enrolmentid', action="store", required=True, type=str)
@@ -128,8 +129,20 @@ if __name__ == "__main__":
     mrp = MRP()
     url = mrp.getCaptchaImageURL()
     
-    show_image_ansi(url)
-    captcha = input("Enter the captcha text: ").strip()
+    import subprocess
+    import shutil
+    
+    response = requests.get(url, stream=True)
+    with open("CaptchaImage.jpg", "wb") as fp:
+        shutil.copyfileobj(response.raw, fp)
+        
+    captcha = subprocess.check_output([
+        "kdialog",
+        "--imginputbox",
+        "CaptchaImage.jpg"
+        ]).decode("utf-8").strip()
+    
+    os.unlink("CaptchaImage.jpg")
     
     try:
         import json
