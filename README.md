@@ -19,6 +19,7 @@ The captcha image will be shown using ImageMagick and you have to provide the ca
 
 ```bash
 $ MRP.py -e 100100000123456 -d 12/03/1994
+<CAPTCHA IMAGE SHOWN HERE>
 Enter the captcha text: L3AD2
 {
   "Enrolment ID": "100100000123456",
