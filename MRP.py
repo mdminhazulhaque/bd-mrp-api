@@ -26,8 +26,6 @@ except ImportError:
 
 import requests
 import re
-import ansi
-from PIL import Image
 
 class MRP():
     __headers = {
@@ -48,7 +46,7 @@ class MRP():
         '__ASYNCPOST': 'true',
         'ctl00$ContentPlaceHolder1$btnVerify': 'Search'
     }
-        
+    
     def getCaptchaImageURL(self):
         response = requests.get('http://www.passport.gov.bd/OnlineStatus.aspx')
         
@@ -69,7 +67,7 @@ class MRP():
         self.__data['ctl00$ContentPlaceHolder1$txtSearchFormNo'] = enrolmentid
         self.__data['ctl00$ContentPlaceHolder1$txtSearchDOB'] = dob
         self.__data['ctl00$ContentPlaceHolder1$txtSearchVerify'] = captchatext        
-
+        
         response = requests.post('http://www.passport.gov.bd/OnlineStatus.aspx', headers=self.__headers, data=self.__data).text
         
         e = "<li>The text you typed does not match the text in the image.</li>"
@@ -101,55 +99,39 @@ class MRP():
         }
         return info
 
-def show_image_ansi(url):
-    img = Image.open(requests.get(url, stream=True).raw)
-    
-    img = img.convert('RGBA')
-    native_width, native_height = img.size
-    maxLen = min(100, native_width)
-    rate = float(maxLen) / max(native_width, native_height)
-    new_width = int(rate * native_width)  
-    new_height = int(rate * native_height)
-    img = img.resize((new_width, new_height), Image.ANTIALIAS)
-    
-    sys.stdout.write("\x1b[49m\x1b[K")
-    sys.stdout.write(ansi.generate_ANSI_from_pixels(img.load(), new_width, new_height, None)[0])
-    sys.stdout.write("\x1b[0m\n")
-
 if __name__ == "__main__":
     import argparse
     import sys
     import os
+    import subprocess
+    import shutil
+    import json
     
     parser = argparse.ArgumentParser(description="Bangladesh MRP Status Checker", add_help=False)
     parser.add_argument('-e', dest='enrolmentid', action="store", required=True, type=str)
     parser.add_argument('-d', dest='dob', action="store", required=True, type=str)
     args = parser.parse_args()
     
-    mrp = MRP()
-    url = mrp.getCaptchaImageURL()
-    
-    import subprocess
-    import shutil
-    
-    response = requests.get(url, stream=True)
-    with open("CaptchaImage.jpg", "wb") as fp:
-        shutil.copyfileobj(response.raw, fp)
-        
-    captcha = subprocess.check_output([
-        "kdialog",
-        "--imginputbox",
-        "CaptchaImage.jpg"
-        ]).decode("utf-8").strip()
-    
-    os.unlink("CaptchaImage.jpg")
-    
     try:
-        import json
+        mrp = MRP()
+        url = mrp.getCaptchaImageURL()
+        
+        TEMPFILE = "CaptchaImage.jpg"
+        
+        response = requests.get(url, stream=True)
+        with open(TEMPFILE, "wb") as fp:
+            shutil.copyfileobj(response.raw, fp)
+        captcha = subprocess.check_output([
+            "/usr/bin/kdialog",
+            "--imginputbox",
+            TEMPFILE
+            ]).decode("utf-8").strip()
+        os.unlink(TEMPFILE)
+        
         status = mrp.getStatus(args.enrolmentid, args.dob, captcha)
         print(json.dumps(status, indent=2))
+    except subprocess.CalledProcessError as cp:
+        print("Captcha Text not provided")
     except Exception as r:
         print(r)
-    except:
-        print("An unknown error occured")
     
