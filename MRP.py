@@ -99,6 +99,7 @@ class MRP():
         }
         return info
 
+
 if __name__ == "__main__":
     import argparse
     import sys
@@ -110,23 +111,27 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Bangladesh MRP Status Checker", add_help=False)
     parser.add_argument('-e', dest='enrolmentid', action="store", required=True, type=str)
     parser.add_argument('-d', dest='dob', action="store", required=True, type=str)
+    parser.add_argument('-k', dest='key', action="store", required=False, type=str)
     args = parser.parse_args()
     
     try:
         mrp = MRP()
         url = mrp.getCaptchaImageURL()
         
-        TEMPFILE = "CaptchaImage.jpg"
-        
-        response = requests.get(url, stream=True)
-        with open(TEMPFILE, "wb") as fp:
-            shutil.copyfileobj(response.raw, fp)
-        captcha = subprocess.check_output([
-            "/usr/bin/kdialog",
-            "--imginputbox",
-            TEMPFILE
-            ]).decode("utf-8").strip()
-        os.unlink(TEMPFILE)
+        if args.key:
+            from python_anticaptcha import AnticaptchaClient, ImageToTextTask
+            response = requests.get(url, stream=True)
+            client = AnticaptchaClient(args.key)
+            task = ImageToTextTask(response.raw)
+            job = client.createTask(task)
+            job.join()
+            captcha = job.get_captcha_text()
+        else:
+            print("Open the following URL in browser and enter the captcha text:")
+            print()
+            print(url)
+            print()
+            captcha = input("Captcha: ")
         
         status = mrp.getStatus(args.enrolmentid, args.dob, captcha)
         print(json.dumps(status, indent=2))
