@@ -72,5 +72,5 @@ Captcha: QAGN8
 
 ## TODO
 
-- [*] Remove Captcha prompt using AntiCaptcha API
+- [x] Remove Captcha prompt using AntiCaptcha API
 - [ ] Bugs?
