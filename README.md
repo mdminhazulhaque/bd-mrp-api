@@ -13,7 +13,7 @@ The captcha image will be shown using ImageMagick and you have to provide the ca
 * python3
 * BeautifulSoup
 * libxml
-* Pillow
+* python-anticaptcha
 
 ## How to Run
 
