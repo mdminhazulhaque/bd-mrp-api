@@ -4,7 +4,7 @@ __author__ = "Md. Minhazul Haque"
 __license__ = "GPLv3"
 
 """
-Copyright (c) 2018 Md. Minhazul Haque
+Copyright (c) 2019 Md. Minhazul Haque
 This file is part of mdminhazulhaque/bd-mrp-api
 (see https://github.com/mdminhazulhaque/banglalionwimaxapi).
 This program is free software: you can redistribute it and/or modify
@@ -33,7 +33,7 @@ class MRP():
         'Origin': 'http://www.passport.gov.bd',
         'Referer': 'http://www.passport.gov.bd/OnlineStatus.aspx',
         'X-MicrosoftAjax': 'Delta=true',
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.80 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36',
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
     }
 
@@ -74,26 +74,29 @@ class MRP():
         if e in response: raise Exception(e.replace("<li>", "").replace("</li>", ""))
         
         regex = re.compile(r'<table\sclass=\"GridList\"(.*?)</table>', re.M|re.S) # M = multiline, S = dot as all
-        table = regex.search(response).group(0)
+        try:
+            table = regex.search(response).group(0)
+        except:
+            return None
         
         soup = BeautifulSoup(table, "lxml")
         values =  soup.find_all("tr")[2].find_all("td")
         
         info = {
-            "Enrolment ID": values[0].text,
+            "EnrolmentID": values[0].text,
             "Status": values[1].text,
-            "Full Name": values[2].text,
-            "First Name": values[3].text,
-            "Last Name": values[4].text,
-            "Date of Birth": values[5].text,
-            "Father's Name": values[6].text,
-            "Mother's Name": values[7].text,
-            "Permanent Address": {
-                "Police Station": values[8].text,
+            "FullName": values[2].text,
+            "FirstName": values[3].text,
+            "LastName": values[4].text,
+            "DateOfBirth": values[5].text,
+            "FathersName": values[6].text,
+            "MothersName": values[7].text,
+            "PermanentAddress": {
+                "PoliceStation": values[8].text,
                 "District": values[9].text
             },
-            "Present Address": {
-                "Police Station": values[10].text,
+            "PresentAddress": {
+                "PoliceStation": values[10].text,
                 "District": values[11].text
             }
         }
